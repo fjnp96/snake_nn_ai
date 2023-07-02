@@ -37,7 +37,7 @@ class Menu:
     
 def play(menu):
     import game
-    game = game.Game(menu.screen,menu.width,menu.height)
+    game = game.Game(menu.width,menu.height,True)
     
         
         

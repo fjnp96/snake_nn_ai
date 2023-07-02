@@ -1,6 +1,6 @@
 import menu
 
-fps = 60
+fps = 10
 
 def main(menu):
     print("Hello world")
