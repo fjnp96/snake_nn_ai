@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 /main.sublime-workspace
+*.sublime-workspace
