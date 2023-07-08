@@ -3,6 +3,7 @@
 import pygame
 import menu_button
 from main import fps
+from game import Game
 
 class Menu:
 # creating a bool value which checks
@@ -36,8 +37,10 @@ class Menu:
 
     
 def play(menu):
-    import game
-    game = game.Game(menu.width,menu.height,True)
+    replay = True
+    while replay:
+        game = Game(menu.width,menu.height,True)
+
     
         
         

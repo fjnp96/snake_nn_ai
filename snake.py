@@ -7,10 +7,12 @@ class Snake:
     #body=list(GameObject)
     def __init__(self, body):
         print("Snake Created")
+        #Head is the first entry of the body
         self.body = body
         self.direction = "east"
 
-    def move(self):
+    def move(self, ate_food = False):
+        temp = self.body[len(self.body)-1]
         #move rest of the body
         for i in range(len(self.body)-1,0,-1):
             self.body[i].set_x(self.body[i-1].x)
@@ -24,6 +26,9 @@ class Snake:
             self.body[0].move_x(-1)
         elif(self.direction=="east"):
             self.body[0].move_x(1)
+        # If it ate a food leave the tail
+        if(ate_food):
+            self.body.append(temp)
 
     #rotate in direction clockwise=0 counterclockwise=1
     def rotate(self, direction):
