@@ -10,7 +10,6 @@ class GameObject:
         height,
         color="#ffffff"
         ):
-        print("creating button")
         self.x = x
         self.y = y
         self.width = width
@@ -34,6 +33,8 @@ class GameObject:
     #Moves in Y axis y amount of steps based on height
     def move_y(self, y):
         self.y = self.y + (y*self.height)
+    def copy(self):
+        return GameObject(self.x,self.y,self.width,self.height,self.color)
 
 
 

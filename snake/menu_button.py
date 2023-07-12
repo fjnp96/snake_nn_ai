@@ -12,7 +12,6 @@ class MenuButton():
         buttonText='Button',
         onclickFunction=None
         ):
-        print("creating button")
         self.x = x
         self.y = y
         self.width = width
@@ -36,7 +35,8 @@ class MenuButton():
             self.buttonSurface.fill(self.fillColors['hover'])
             if pygame.mouse.get_pressed(num_buttons=3)[0]:
                 self.buttonSurface.fill(self.fillColors['pressed'])
-                self.onclickFunction(menu)
+                if(self.onclickFunction!=None):
+                    self.onclickFunction(menu)
             else:
                 self.alreadyPressed = False
         self.buttonSurface.blit(self.buttonSurf, [

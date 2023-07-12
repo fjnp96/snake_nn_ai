@@ -49,10 +49,11 @@ class Game:
     def game_cycle(self):
         ate_food = self.ate_food()
         if(ate_food):
+            print("Ate food ->", str(self.food.x) + ":" + str(self.food.y))
             self.score = self.score + self.points
             self.generate_food()
         if(not(self.game_over)):
-            self.snake.move(self.ate_food)
+            self.snake.move(ate_food)
         if(self.lose()):
             self.game_over = True
             self.running = False

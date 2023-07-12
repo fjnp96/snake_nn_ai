@@ -1,4 +1,5 @@
 import pygame
+import copy
 
 class Snake:
     clockwise = {"north":"east","east":"south","south":"west","west":"north"}
@@ -12,7 +13,8 @@ class Snake:
         self.direction = "east"
 
     def move(self, ate_food = False):
-        temp = self.body[len(self.body)-1]
+        if(ate_food):
+            temp = self.body[len(self.body)-1].copy()
         #move rest of the body
         for i in range(len(self.body)-1,0,-1):
             self.body[i].set_x(self.body[i-1].x)
