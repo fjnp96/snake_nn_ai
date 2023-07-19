@@ -41,10 +41,10 @@ class Game:
                     break
             if(self.display):
                 self.display_game()
+                #updates the frames of the game
+                pygame.display.flip()
+                self.fpsClock.tick(fps)
             self.game_cycle()
-            #updates the frames of the game
-            pygame.display.flip()
-            self.fpsClock.tick(fps)
 
     def game_cycle(self):
         ate_food = self.ate_food()

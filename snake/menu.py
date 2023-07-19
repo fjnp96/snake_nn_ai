@@ -2,6 +2,7 @@
 # import pygame package
 import pygame
 import menu_button
+import config
 from main import fps
 from game import Game
 from score_menu import ScoreMenu
@@ -15,8 +16,10 @@ class Menu:
     def __init__(self,width,height):
         self.width = width
         self.height = height
-        start_button = menu_button.MenuButton(width/3,height/3,width/3,height/3,"Play",play)
+        start_button = menu_button.MenuButton(width*0.33,height*0.13,width*0.33,height*0.33,"Play",play)
+        train_button = menu_button.MenuButton(width*0.33,height*0.57,width*0.33,height*0.33,"Train",train)
         self.objects.append(start_button)
+        self.objects.append(train_button)
 
     def display(self):
         # initializing imported module
@@ -48,6 +51,11 @@ def play(menu):
         score_menu.display()
         replay = score_menu.replay
         menu.screen.fill("#000000")
+
+def train():
+    pygame.quit()
+    while(True):
+        input("hello there type somehting:")
 
 
     
