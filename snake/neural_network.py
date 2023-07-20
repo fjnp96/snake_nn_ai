@@ -1,11 +1,15 @@
 import numpy as np
+import random
+import config
 
 class Network:
-    def __init__(self):
+    def __init__(self,nn_id=None):
+        self.id = nn_id
         self.layers = []
 
     def add(self, layer):
         self.layers.append(layer)
+
     def predict(self, input_data):
         samples = len(input_data)
         result = []
@@ -16,6 +20,28 @@ class Network:
                 output = layer.forward_propagation(output)
             result.append(output)
         return result
+
+    def mutate(self,prob=config.default_mutation_rate):
+        for i in self.layers:
+            if(not isinstance(i,FCLayer)):
+                continue
+            i.weights += mutate_matrix(np.shape(i.weights),prob)
+            i.bias += mutate_matrix(np.shape(i.bias),prob)
+
+
+    def print(self):
+        print("Printing Network")
+        print("NN ID: ",self.id)
+        for i in range(len(self.layers)):
+            if(isinstance(self.layers[i],FCLayer)):
+                print("//// FCLayer"+str(i+1)+" ////")
+                print("Weights")
+                print(self.layers[i].weights)
+                print("Bias")
+                print(self.layers[i].bias)
+            if(isinstance(self.layers[i], ActivationLayer)):
+                print("//// ActivationLayer"+str(i+1)+" ////")
+                print("Activation Function: "+self.layers[i].activation.__name__)
 
 class Layer:
     def __init__(self):
@@ -46,3 +72,11 @@ class ActivationLayer(Layer):
 
 def tanh(x):
      return np.tanh(x)
+
+#Returns a Matrix to be summed to the NN matrix changing the values of the actual layer
+def mutate_matrix(shape,prob):
+    mutate_value_matrix = np.random.uniform(config.min_mutation,config.max_mutation,size = shape)
+    mutate_bool_matrix = np.random.choice(a=[True, False], size=shape, p=[prob, 1-prob])
+    zero_matrix = np.zeros(shape)
+    return np.where(mutate_bool_matrix,mutate_value_matrix,zero_matrix)
+
