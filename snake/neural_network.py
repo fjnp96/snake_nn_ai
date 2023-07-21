@@ -22,11 +22,28 @@ class Network:
         return result
 
     def mutate(self,prob=config.default_mutation_rate):
-        for i in self.layers:
-            if(not isinstance(i,FCLayer)):
+        for layer in self.layers:
+            if(not isinstance(layer,FCLayer)):
                 continue
-            i.weights += mutate_matrix(np.shape(i.weights),prob)
-            i.bias += mutate_matrix(np.shape(i.bias),prob)
+            layer.weights += mutate_matrix(np.shape(layer.weights),prob)
+            layer.bias += mutate_matrix(np.shape(layer.bias),prob)
+
+    def random_crossover(self,parent2,child_id=None):
+        child = Network(child_id)
+        for (layer1,layer2) in zip(self.layers, parent2.layers):
+            if(not isinstance(layer1,FCLayer)):
+                child.add(ActivationLayer(layer1.activation))
+                continue
+            shape = np.shape(layer1.weights)
+            child_layer=FCLayer(shape[0],shape[1])
+            crossover_bool_matrix = np.random.choice(a=[True, False], size=shape, p=[0.5, 0.5])
+            child_layer.weights = np.where(crossover_bool_matrix,layer1.weights,layer2.weights)
+            crossover_bool_matrix = np.random.choice(a=[True, False], size=np.shape(layer1.bias), p=[0.5, 0.5])
+            child_layer.bias = np.where(crossover_bool_matrix,layer1.bias,layer2.bias)
+            child.add(child_layer)
+        return child
+
+
 
 
     def print(self):
