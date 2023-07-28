@@ -46,6 +46,25 @@ class Game:
                 self.fpsClock.tick(fps)
             self.game_cycle()
 
+    def play_nn(self, nn):
+        self.setup_game()
+        # Game loop
+        while self.running:
+            nn.predict()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    pygame.quit()
+                elif event.type == pygame.KEYDOWN:
+                    self.key_pressed(event.key)
+                    break
+            if(self.display):
+                self.display_game()
+                #updates the frames of the game
+                pygame.display.flip()
+                self.fpsClock.tick(fps)
+            self.game_cycle()
+
     def game_cycle(self):
         ate_food = self.ate_food()
         if(ate_food):

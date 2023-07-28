@@ -11,20 +11,30 @@ def main(menu):
     train()
 
 def train():
-    nn = Network(1)
-    nn.add(FCLayer(2,3))
-    nn.add(ActivationLayer(tanh))
-    nn.add(FCLayer(3,1))
-    nn.add(ActivationLayer(tanh))
-    nn2 = Network(2)
-    nn2.add(FCLayer(2,3))
-    nn2.add(ActivationLayer(tanh))
-    nn2.add(FCLayer(3,1))
-    nn2.add(ActivationLayer(tanh))
-    nn.print()
-    nn2.print()
-    nn3 = nn.random_crossover(nn2,3)
-    nn3.print()
+    population = generate_population(config.training_population)
+    population[0].print()
+    print("Prediction: ",population[0].predict([1,1,1,1]))
+
+def generate_population(x):
+    population = []
+    layers = config.nn_nb_hidden_layers
+    activation_function = get_activation_function()
+    for i in range(x):
+        nn = Network(i)
+        #add first layer based on number of inputs
+        nn.add(FCLayer(config.nn_nb_inputs,layers[0]))
+        nn.add(ActivationLayer(activation_function))
+        for j in range(1,len(layers)):
+            nn.add(FCLayer(layers[j-1],layers[j]))
+            nn.add(ActivationLayer(activation_function))
+        #add Output Layer
+        nn.add(FCLayer(layers[len(layers)-1],3))
+        nn.add(ActivationLayer(lambda a : a))
+        population.append(nn)
+    return population
+
+def equal(x):
+    return x
 
 if __name__ == "__main__":
     main(menu)

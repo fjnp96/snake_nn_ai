@@ -10,6 +10,8 @@ class Network:
     def add(self, layer):
         self.layers.append(layer)
 
+    """
+    #Usual predict for each sample we dont want this
     def predict(self, input_data):
         samples = len(input_data)
         result = []
@@ -20,6 +22,12 @@ class Network:
                 output = layer.forward_propagation(output)
             result.append(output)
         return result
+    """
+    def predict(self, input_data):
+        output = input_data
+        for layer in self.layers:
+            output = layer.forward_propagation(output)
+        return output[0]
 
     def mutate(self,prob=config.default_mutation_rate):
         for layer in self.layers:
@@ -86,6 +94,10 @@ class ActivationLayer(Layer):
         self.input = input_data
         self.output = self.activation(self.input)
         return self.output
+
+def get_activation_function():
+    if(config.activation_function == "tahn"):
+        return tanh
 
 def tanh(x):
      return np.tanh(x)
