@@ -1,6 +1,7 @@
 #Game
 import pygame
 import random
+import math
 from main import fps
 from snake import Snake
 from menu_button import MenuButton
@@ -50,6 +51,7 @@ class Game:
         self.setup_game()
         # Game loop
         while self.running:
+            nn.get_game_state()
             nn.predict()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -76,6 +78,7 @@ class Game:
         if(self.lose()):
             self.game_over = True
             self.running = False
+        self.get_game_state()
 
     #returns true if it hit a wall or itself
     def lose(self):
@@ -184,5 +187,71 @@ class Game:
                 self.snake.direction = "west"
                 print("west")
 
+    #Returns a list which will be the Input for the NN
+    #This list will have 24 elements, which represent the 8 direction the snake looks and distance to food, itself, and the wall
+    def get_game_state(self):
+        game_state = []
+        #MAGIC NUMBER TO BE CHANGED
+        magic = 20
+        #food
+        food = (self.food.x/20,self.food.y/20)
+        #Snake head
+        head = (self.snake.body[0].x/20,self.snake.body[0].y/20)
 
+
+        #distance to the food
+        for i in get_food_distance(food,head):
+            game_state.append(i)
+        #distance to the wall
+
+        return game_state
+
+# this function will return the 8 values for the food since only one can have a value
+def get_food_distance(food, head):
+    #[N,NE,E,SE,S,SW,W,NW]
+    food_distance=[0,0,0,0,0,0,0,0]
+    #x axis
+    if(solve(head,0,head[0],(food[1],food[0]))):
+        d = math.dist(head,food)
+        #Food is to the North
+        if(head[1]>food[1]):
+            food_distance[0] = d
+        #Food is to the South
+        else:
+            food_distance[4] = d
+    #y axis
+    if(solve(head,0,head[1],food)):
+        d = math.dist(head,food)
+        #Food is to the East
+        if(head[0]>food[0]):
+            food_distance[2] = d
+        #food is to West
+        else:
+            food_distance[6] = d
+    #Diagonal
+    #y=x
+    if(solve(head,1,head[1]-head[0],food)):
+        d = math.dist(head,food)
+        #Food is to the NW
+        if(head[0]>food[0]):
+            food_distance[7] = d
+        #Food is to the SE
+        else:
+            food_distance[3] = d
+    #y=-x
+    if(solve(head,-1,head[0]+head[1],food)):
+        d = math.dist(head,food)
+        #Food is to the SW
+        if(head[0]>food[0]):
+            food_distance[5] = d
+        #Food is to the NE
+        else:
+            food_distance[1] = d
+    return food_distance
+
+
+#y = mx+b
+#checks if point is in function
+def solve(head, m, b, point):
+   return point[1] == (m * point[0]) + b
 

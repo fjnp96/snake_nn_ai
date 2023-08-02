@@ -12,8 +12,8 @@ def main(menu):
 
 def train():
     population = generate_population(config.training_population)
-    population[0].print()
-    print("Prediction: ",population[0].predict([1,1,1,1]))
+    for i in population:
+        game = Game()
 
 def generate_population(x):
     population = []
