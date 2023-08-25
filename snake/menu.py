@@ -3,7 +3,7 @@
 import pygame
 import menu_button
 import config
-from main import fps
+from config import fps
 from game import Game
 from score_menu import ScoreMenu
 

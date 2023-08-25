@@ -2,7 +2,7 @@
 # import pygame package
 import pygame
 import menu_button
-from main import fps
+from config import fps
 
 class ScoreMenu:
 # creating a bool value which checks

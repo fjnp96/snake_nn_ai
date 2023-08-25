@@ -1,7 +1,7 @@
 import menu
 import config
+from game import Game
 from neural_network import *
-fps = 10
 
 def main(menu):
     print("Hello world")
@@ -13,7 +13,8 @@ def main(menu):
 def train():
     population = generate_population(config.training_population)
     for i in population:
-        game = Game()
+        game = Game(800,600,False)
+
 
 def generate_population(x):
     population = []
