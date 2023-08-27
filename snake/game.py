@@ -7,6 +7,7 @@ from snake import Snake
 from menu_button import MenuButton
 from game_object import GameObject
 from config import fps
+from config import max_steps
 
 font = pygame.font.SysFont('Arial',40)
 
@@ -18,7 +19,7 @@ class Game:
     #receives max width and height to know how to build
     #display: Boolean -> display this game?
     def __init__(self, width, height, display):
-        print("Game initializing...")
+        #print("Game initializing...")
         self.object_size = width/40
         self.width = width
         self.height = height
@@ -27,7 +28,6 @@ class Game:
         self.running = True
         self.display = display
         self.game_over = False
-        self.play()
 
     #Game Cycle
     def play(self):
@@ -51,10 +51,16 @@ class Game:
     #Cycle for NN to Play
     def play_nn(self, nn):
         self.setup_game()
+        self.setup_nn_game()
         # Game loop
         while self.running:
-            nn.get_game_state()
-            nn.predict()
+            #Checks for max steps
+            if(self.steps == max_steps):
+                if(not self.turned):
+                    self.score = 0
+                self.running = False
+                break
+            self.move_nn_snake(nn.predict(self.get_game_state()))
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
@@ -69,18 +75,39 @@ class Game:
                 self.fpsClock.tick(fps)
             self.game_cycle()
 
+    #Move NN snake based on the prediction list
+    def move_nn_snake(self,predictions):
+        move = np.argmax(predictions)
+        #move can be either 0,1 or 2
+        #0 -> rotate counter_clockwise
+        #1 -> doesnt move
+        #2 -> rotate clockwise
+        direction = self.snake.direction
+        if((move == 0 and direction=="east") or (move==2 and direction=="west")):
+            self.snake.direction = "north"
+        elif((move == 0 and direction=="south") or (move==2 and direction=="north")):
+            self.snake.direction = "east"
+        elif((move == 0 and direction=="west") or (move==2 and direction=="east")):
+            self.snake.direction = "south"
+        elif((move == 0 and direction=="north") or (move==2 and direction=="south")):
+            self.snake.direction = "west"
+        if(move!=1):
+            self.turned==True
+        #increment the steps taken
+        self.steps = self.steps + 1
+
     def game_cycle(self):
         ate_food = self.ate_food()
         if(ate_food):
             #print("Ate food ->", str(self.food.x) + ":" + str(self.food.y))
             self.score = self.score + self.points
             self.generate_food()
+            self.steps = 0
         if(not(self.game_over)):
             self.snake.move(ate_food)
         if(self.lose()):
             self.game_over = True
             self.running = False
-        self.get_game_state()
         """
         print("[N,NE,E,SE,S,SW,W,NW]")
         print("Distance to food: " ,debug[:8])
@@ -152,6 +179,9 @@ class Game:
         #Screen to display the Score
         self.score_screen = pygame.Surface((self.score_margin*4,self.score_margin))
         pygame.display.set_caption('Snake Game')
+    def setup_nn_game(self):
+        self.steps = 0
+        self.turned=False
 
     def draw_body(self):
         for body in self.snake.body:
@@ -307,7 +337,7 @@ def get_distance_to_walls(head,width,height):
             if(head[1]<height/2):
                 walls = (up_wall,right_wall,left_wall,up_wall)
             else:
-                walls = (right_wall,right_Wall,down_wall,up_wall)
+                walls = (right_wall,right_wall,down_wall,up_wall)
         else:
             if(head[1]>height/2):
                 walls = (right_wall,down_wall,down_wall,left_wall)

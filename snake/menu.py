@@ -46,6 +46,7 @@ def play(menu):
     while replay:
         print("Repeat")
         game = Game(menu.width,menu.height,True)
+        game.play()
         #SCORE MENU
         score_menu = ScoreMenu(menu.width,menu.height,game.score)
         score_menu.display()

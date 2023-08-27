@@ -7,7 +7,7 @@ class Snake:
 
     #body=list(GameObject)
     def __init__(self, body):
-        print("Snake Created")
+        #print("Snake Created")
         #Head is the first entry of the body
         self.body = body
         self.direction = "east"
