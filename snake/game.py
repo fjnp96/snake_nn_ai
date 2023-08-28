@@ -3,11 +3,14 @@ import pygame
 import random
 import math
 import numpy as np
+import keyboard
 from snake import Snake
 from menu_button import MenuButton
 from game_object import GameObject
 from config import fps
 from config import max_steps
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 font = pygame.font.SysFont('Arial',40)
 
@@ -58,16 +61,12 @@ class Game:
             if(self.steps == max_steps):
                 if(not self.turned):
                     self.score = 0
+                    self.steps = 0
                 self.running = False
                 break
             self.move_nn_snake(nn.predict(self.get_game_state()))
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                    pygame.quit()
-                elif event.type == pygame.KEYDOWN:
-                    self.key_pressed(event.key)
-                    break
+            if(keyboard.is_pressed("space")):
+                self.display = False
             if(self.display):
                 self.display_game()
                 #updates the frames of the game
@@ -159,26 +158,25 @@ class Game:
 
 
     def setup_game(self):
-        #Creates the Food
-        food_x, food_y = self.random_food()
-        self.food = GameObject(food_x,food_y,self.object_size,self.object_size,"#30ab1f")
         #Creates the Snake
-        snake1 = [GameObject(160,20,self.object_size,self.object_size,"#e3dc45")]
-        snake1.append(GameObject(140,20,self.object_size,self.object_size,"#d39d20"))
-        snake1.append(GameObject(120,20,self.object_size,self.object_size,"#d39d20"))
-        snake1.append(GameObject(100,20,self.object_size,self.object_size,"#d39d20"))
-        snake1.append(GameObject(80,20,self.object_size,self.object_size,"#d39d20"))
-        snake1.append(GameObject(60,20,self.object_size,self.object_size,"#d39d20"))
-        snake1.append(GameObject(40,20,self.object_size,self.object_size,"#d39d20"))
+        snake1 = [GameObject(40,20,self.object_size,self.object_size,"#e3dc45")]
         snake1.append(GameObject(20,20,self.object_size,self.object_size,"#d39d20"))
         snake1.append(GameObject(0,20,self.object_size,self.object_size,"#d39d20"))
         self.snake = Snake(snake1)
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        #Screen to display the game Screen
-        self.game_screen =  pygame.Surface((self.game_width,self.game_height))
-        #Screen to display the Score
-        self.score_screen = pygame.Surface((self.score_margin*4,self.score_margin))
-        pygame.display.set_caption('Snake Game')
+        #Creates the Food
+        food_x, food_y = self.random_food()
+        self.food = GameObject(food_x,food_y,self.object_size,self.object_size,"#30ab1f")
+        self.generate_food(True)
+        if(food_x<0 or food_x>=self.game_width or food_y<0 or food_y>=self.game_height):
+            raise Exception("Food position is not acceptable, x:",food_x," y:",food_y, " game_width:",self.game_width, " game_height:", self.game_height)
+
+        if(self.display):
+            pygame.display.set_caption('Snake Game')
+            self.screen = pygame.display.set_mode((self.width, self.height))
+            #Screen to display the game Screen
+            self.game_screen =  pygame.Surface((self.game_width,self.game_height))
+            #Screen to display the Score
+            self.score_screen = pygame.Surface((self.score_margin*4,self.score_margin))
     def setup_nn_game(self):
         self.steps = 0
         self.turned=False
@@ -188,25 +186,34 @@ class Game:
             body.draw(self.game_screen)
 
     #Food Part
-    def generate_food(self):
+    def generate_food(self, same_line=False):
         food_x, food_y = self.random_food()
         head = self.snake.body[0]
         while(True):
+            food_x,food_y = self.random_food()
             for i in self.snake.body:
                 if(i.x==food_x and i.y==food_y):
-                    food_x,food_y = self.random_food()
                     continue
                 elif((self.snake.direction=="east" or self.snake.direction=="west") and head.y == food_y):
-                    food_x,food_y = self.random_food()
                     continue
                 elif((self.snake.direction=="north" or self.snake.direction=="south") and head.x == food_x):
-                    food_x,food_y = self.random_food()
                     continue
 
-
+            if(self.food_in_direction(food_x,food_y)):
+                continue
             break
         self.food.set_x(food_x)
         self.food.set_y(food_y)
+
+    #returns true if the food was created in the direction of the snake
+    def food_in_direction(self,food_x,food_y):
+        head = self.snake.body[0]
+        direction = self.snake.direction
+        if((direction=="north" or direction=="south") and (food_x==head.x)):
+            return True
+        elif((direction=="east" or direction=="west") and (food_y==head.y)):
+            return True
+        return False
 
     def random_food(self):
         x= random.randrange(0,self.game_width-self.object_size,self.object_size)
@@ -257,6 +264,7 @@ class Game:
         game_state.extend(get_distance_to_itself(head,body))
         game_state.append(get_direction(self.snake.direction))
         return game_state
+
 
 
 def get_direction(direction):

@@ -102,6 +102,9 @@ def get_activation_function():
 def tanh(x):
      return np.tanh(x)
 
+def equal_activation_function(a):
+    return a
+
 #Returns a Matrix to be summed to the NN matrix changing the values of the actual layer
 def mutate_matrix(shape,prob):
     mutate_value_matrix = np.random.uniform(config.min_mutation,config.max_mutation,size = shape)
