@@ -58,7 +58,7 @@ class Game:
         # Game loop
         while self.running:
             #Checks for max steps
-            if(self.steps == max_steps):
+            if(self.steps == (max_steps*(self.score+1))):
                 if(not self.turned):
                     self.score = 0
                     self.steps = 0
@@ -134,6 +134,7 @@ class Game:
         head = self.snake.body[0]
         for i in range(1,len(self.snake.body)):
             if(self.snake.body[i].x == head.x and self.snake.body[i].y == head.y):
+                self.hit_itself_bool = True
                 return True
         return False
 
@@ -159,9 +160,10 @@ class Game:
 
     def setup_game(self):
         #Creates the Snake
-        snake1 = [GameObject(40,20,self.object_size,self.object_size,"#e3dc45")]
-        snake1.append(GameObject(20,20,self.object_size,self.object_size,"#d39d20"))
-        snake1.append(GameObject(0,20,self.object_size,self.object_size,"#d39d20"))
+        snake1 = [GameObject(60,40,self.object_size,self.object_size,"#e3dc45")]
+        snake1.append(GameObject(40,40,self.object_size,self.object_size,"#d39d20"))
+        snake1.append(GameObject(20,40,self.object_size,self.object_size,"#d39d20"))
+        snake1.append(GameObject(0,40,self.object_size,self.object_size,"#d39d20"))
         self.snake = Snake(snake1)
         #Creates the Food
         food_x, food_y = self.random_food()
@@ -180,6 +182,7 @@ class Game:
     def setup_nn_game(self):
         self.steps = 0
         self.turned=False
+        self.hit_itself_bool = False
 
     def draw_body(self):
         for body in self.snake.body:
@@ -198,22 +201,10 @@ class Game:
                     continue
                 elif((self.snake.direction=="north" or self.snake.direction=="south") and head.x == food_x):
                     continue
-
-            if(self.food_in_direction(food_x,food_y)):
-                continue
             break
         self.food.set_x(food_x)
         self.food.set_y(food_y)
 
-    #returns true if the food was created in the direction of the snake
-    def food_in_direction(self,food_x,food_y):
-        head = self.snake.body[0]
-        direction = self.snake.direction
-        if((direction=="north" or direction=="south") and (food_x==head.x)):
-            return True
-        elif((direction=="east" or direction=="west") and (food_y==head.y)):
-            return True
-        return False
 
     def random_food(self):
         x= random.randrange(0,self.game_width-self.object_size,self.object_size)

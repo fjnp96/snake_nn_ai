@@ -30,6 +30,12 @@ class Network:
         return output[0]
 
     def mutate(self,prob=config.default_mutation_rate):
+        if(config.random_mutation):
+            for layer in self.layers:
+                if(not isinstance(layer,FCLayer)):
+                    continue
+                layer.weights = mutate_random_matrix(layer.weights,np.shape(layer.bias),prob)
+                layer.bias = mutate_random_matrix(layer.bias,np.shape(layer.bias),prob)
         for layer in self.layers:
             if(not isinstance(layer,FCLayer)):
                 continue
@@ -78,7 +84,7 @@ class Layer:
 
 class FCLayer(Layer):
     def __init__(self, input_size, output_size):
-        self.weights = np.random.rand(input_size,output_size) - 0.50
+        self.weights = np.random.rand(input_size,output_size) - 0.5
         self.bias = np.random.rand(1,output_size) - 0.5
 
     def forward_propagation(self,input_data):
@@ -95,12 +101,20 @@ class ActivationLayer(Layer):
         self.output = self.activation(self.input)
         return self.output
 
-def get_activation_function():
-    if(config.activation_function == "tahn"):
-        return tanh
 
 def tanh(x):
      return np.tanh(x)
+
+def relu(x):
+    return np.maximum(0,x)
+
+def get_activation_function(name):
+    if(name =="tanh"):
+        return tanh
+    elif(name == "relu"):
+        return relu
+    else:
+        raise Exception("Activation function not implemented:",name)
 
 def equal_activation_function(a):
     return a
@@ -111,4 +125,10 @@ def mutate_matrix(shape,prob):
     mutate_bool_matrix = np.random.choice(a=[True, False], size=shape, p=[prob, 1-prob])
     zero_matrix = np.zeros(shape)
     return np.where(mutate_bool_matrix,mutate_value_matrix,zero_matrix)
+
+#returns a matrix to be compared
+def mutate_random_matrix(matrix,shape,prob):
+    mutate_value_matrix = np.random.uniform(-0.5,0.5,size = shape)
+    mutate_bool_matrix = np.random.choice(a=[True, False], size=shape, p=[prob, 1-prob])
+    return np.where(mutate_bool_matrix,mutate_value_matrix,matrix)
 

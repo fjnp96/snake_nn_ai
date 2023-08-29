@@ -18,56 +18,57 @@ def main(menu):
     if(not config.skip_menu):
         mainMenu = menu.Menu(800,600)
         mainMenu.display()
-    train()
+    train_cycle()
 #@profile
-def train():
+def train_cycle():
+    layers_list = [[16],[16,16],[16,32,16],[25],[25,25],[25,50,25],[25,50,100,50,25]]
+    for layers in layers_list:
+        for act_fun in config.activation_functions:
+            initial_population = generate_population(0,config.training_population,act_fun,layers)
+            train(initial_population,config.genetic_type,act_fun,layers)
+
+def train(initial_population,genetic_type,activation_function,hidden_layers):
     start = time.time()
     #number of id's in population
     current_population=config.training_population
-    population = generate_population(0,config.training_population)
-    #cycle to compare genetic_algorithm
-    f_name = 1
-    while(f_name<2):
-        config.genetic_type=f_name
-        print("CONFIGGENETICTYPE: ",config.genetic_type)
-        running = True
-        generation = 1
-        #variable to start showing the NN's
-        display = False
-        #Mean of the top performers over the genarations
-        top_performers_mean = []
-        while(running):
-            current_population = genetic_algorithm(population,top_performers_mean,current_population, generation, display)
-            if(generation>=1000):
-                break
-            generation+=1
-            #Stop cycle
-            if(keyboard.is_pressed("space")):
-                break
-        end = time.time()
-        print("Took ",end-start, " Seconds to run")
-        print("top_performers_mean",top_performers_mean)
-        print("Plotting")
-        trace = go.Scatter(x=[i for i in range(1,generation+1,1)],y=top_performers_mean)
-        offline.plot([trace], filename = "test"+str(f_name)+".html")
-        f_name+=1
+    population = initial_population.copy()
+    #print("CONFIGGENETICTYPE: ",config.genetic_type)
+    #print("Config activation function: ",config.activation_function)
+    running = True
+    generation = 1
+    #variable to start showing the NN's
+    display = False
+    #Mean of the top performers over the genarations
+    top_performers_mean = []
+    while(running):
+        current_population = genetic_algorithm(genetic_type,population,top_performers_mean,current_population, generation, hidden_layers)
+        generation+=1
+        #Stop cycle
+        if(keyboard.is_pressed("space") or generation>500):
+            break
+    end = time.time()
+    print("Took ",end-start, " Seconds to run")
+    print("top_performers_mean",top_performers_mean)
+    print("Plotting")
+    trace = go.Scatter(x=[i for i in range(1,generation+1,1)],y=top_performers_mean)
+    offline.plot([trace], filename = "results"+str(genetic_type)+"-"+activation_function+str(hidden_layers)+".html")
 
-def genetic_algorithm(population,top_performers_mean,current_population, generation, display):
-    if(config.genetic_type==0):
+def genetic_algorithm(genetic_type,population,top_performers_mean,current_population, generation, hidden_layers):
+    if(genetic_type==0):
         #pop_score = {}
         # {id:(score,score+steps)}
-        pop_score = play_population(population,display)
+        pop_score = play_population(population)
         #List of NN id's sorted by score
         top_performers = pick_top(pop_score)
         calculate_top_mean(top_performers_mean,pop_score,top_performers)
         print_top_scores(pop_score, top_performers, generation)
         population, current_population = crossover_population(population,top_performers,current_population)
         mutate_population(population)
-        current_population = fill_population(population,current_population)
+        current_population = fill_population(population,current_population,hidden_layers)
 
-    if(config.genetic_type==1):
+    if(genetic_type==1):
         #Play population and get Scores
-        pop_score = play_population(population,display)
+        pop_score = play_population(population)
         #SOrt the Scores
         sorted_score = get_sorted(pop_score)
         N = int(len(pop_score)*config.percentage_to_reproduce)
@@ -80,18 +81,17 @@ def genetic_algorithm(population,top_performers_mean,current_population, generat
     return current_population
 
 
-def generate_population(start,end):
+def generate_population(start,end,activation_function, hidden_layers):
     population = {}
-    layers = config.nn_nb_hidden_layers
-    activation_function = get_activation_function()
+    layers = hidden_layers
     for i in range(start,end,1):
         nn = Network(i)
         #add first layer based on number of inputs
         nn.add(FCLayer(config.nn_nb_inputs,layers[0]))
-        nn.add(ActivationLayer(activation_function))
+        nn.add(ActivationLayer(get_activation_function(activation_function)))
         for j in range(1,len(layers)):
             nn.add(FCLayer(layers[j-1],layers[j]))
-            nn.add(ActivationLayer(activation_function))
+            nn.add(ActivationLayer(get_activation_function(activation_function)))
         #add Output Layer
         nn.add(FCLayer(layers[len(layers)-1],3))
         nn.add(ActivationLayer(equal_activation_function))
@@ -105,7 +105,7 @@ def play_population(population, display=False):
     #Multiprocessing
     # start the process pool
     start1 = time.time()
-    with ProcessPoolExecutor(8) as executor:
+    with ProcessPoolExecutor(6) as executor:
         # submit all tasks
         for score in executor.map(play_nn, population.values(), repeat(display)):
             pop_score[score[0]] = score[1]
@@ -167,11 +167,11 @@ def mutate_population(population):
     for nn in population.values():
         nn.mutate()
 
-def fill_population(population, current_population):
+def fill_population(population, current_population, activation_function,hidden_layers):
     start = current_population
     end = current_population + config.training_population - len(population)
     current_population = current_population + config.training_population - len(population)
-    population.update(generate_population(start,end))
+    population.update(generate_population(start,end,activation_function,hidden_layers))
     if(len(population)!=config.training_population):
         raise Exception("Population not filled until training_population, current_population:",len(population))
     return current_population
@@ -193,8 +193,10 @@ def equal(x):
     return x
 
 def get_score(game):
-    return (game.score*100)+game.steps
+    hit_itself_score = 0
+    if(game.hit_itself_bool):
+        hit_itself_score = -250
+    return (game.score*1000)+game.steps+hit_itself_score
 
 if __name__ == "__main__":
     main(menu)
-
