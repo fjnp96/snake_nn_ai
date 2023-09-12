@@ -13,9 +13,12 @@ from matplotlib import pyplot as plt
 from itertools import repeat
 import plotly.graph_objs as go
 import plotly.offline as offline
+import os
 
 
 def main(menu):
+    if not os.path.exists("results"):
+        os.mkdir("results")
     if(not config.skip_menu):
         mainMenu = menu.Menu(800,600)
         mainMenu.display()
@@ -55,7 +58,7 @@ def train(initial_population,genetic_type,activation_function,hidden_layers):
     print("top_performers_mean",top_performers_mean)
     print("Plotting")
     trace = go.Scatter(x=[i for i in range(1,generation+1,1)],y=top_performers_mean)
-    offline.plot([trace], filename = "results"+str(genetic_type)+"-"+activation_function+str(hidden_layers)+".html")
+    offline.plot([trace], filename = "results/results"+str(genetic_type)+"-"+activation_function+str(hidden_layers)+".html")
 
 def genetic_algorithm(genetic_type,population,top_performers_mean,current_population, generation, hidden_layers):
     if(genetic_type==0):
@@ -79,7 +82,7 @@ def genetic_algorithm(genetic_type,population,top_performers_mean,current_popula
         top_performers = sorted_score[:N]
         calculate_top_mean(top_performers_mean,pop_score,top_performers)
         print_top_scores(pop_score,top_performers,generation)
-        current_population = crossover_population2(population,sorted_score,top_performers,current_population)
+        population, current_population = crossover_population2(population,sorted_score,top_performers,current_population)
         mutate_population(population)
     if(genetic_type==2):
         #Play population and get Scores
@@ -150,53 +153,61 @@ def crossover_population(population, top_performers,current_population):
     for i in range(0,len(top_performers),2):
         parent1 = population[top_performers[i]]
         parent2 = population[top_performers[i+1]]
-        child = parent1.random_crossover(parent2,current_population)
+        child1,child2 = parent1.random_crossover(parent2,current_population)
         new_population[top_performers[i]] = parent1
         new_population[top_performers[i+1]] = parent2
-        new_population[current_population] = child
-        current_population=current_population+1
+        new_population[current_population] = child1
+        new_population[current_population+1] = child2
+        current_population=current_population+2
     return new_population, current_population
 
-#similar to the other one but will remove the worst ones based how many child were created
+#similar to the first one but will remove the worst ones based how many child were created
 #new populaton = old population +childs - N worst ones where N = len(childs)
 def crossover_population2(population,sorted_score,top_performers,current_population):
-    N = int(len(population)*config.percentage_to_reproduce)
+    new_population = copy.deepcopy(population)
+    N = int(len(new_population)*config.percentage_to_reproduce)
     top_performers = sorted_score[:N]
     N=0
     #Crossover
     for i in range(0,len(top_performers),2):
-        parent1 = population[top_performers[i]]
-        parent2 = population[top_performers[i+1]]
-        child = parent1.random_crossover(parent2,current_population)
+        parent1 = new_population[top_performers[i]]
+        parent2 = new_population[top_performers[i+1]]
+        child1, child2 = parent1.random_crossover(parent2,current_population)
         #population[top_performers[i]] = parent1
         #population[top_performers[i+1]] = parent2
-        population[current_population] = child
-        current_population=current_population+1
+        new_population[current_population] = child1
+        new_population[current_population+1] = child2
+        current_population+=2
         N+=1
     #pop worst performers
     worst_performers = sorted_score[-N:]
     for worst_performer in worst_performers:
-        population.pop(worst_performer)
+        new_population.pop(worst_performer)
     if(len(population)!=config.training_population):
         raise Exception("In crossover_population_2 population size is different from training crossover_population")
-    return current_population
+    return new_population, current_population
 
 def crossover_population3(population,top_performers,worst_performers,current_population):
     new_population = {}
-    for i in worst_performers:
+    for _ in range(round(len(worst_performers)/2)):
         parent1 = random.choice(top_performers)
         parent2 = random.choice(top_performers)
         while(parent1 == parent2):
             parent2 = random.choice(top_performers)
         if(current_population in population.keys()):
             raise Exception("Error adding new child because key/id already in population")
-        new_population[current_population] = population[parent1].random_crossover(population[parent2],current_population)
-        current_population=current_population+1
+        child1, child2 = population[parent1].random_crossover(population[parent2],current_population)
+        new_population[current_population] = child1
+        new_population[current_population+1] = child2
+        current_population+=2
     mutate_population(new_population)
     for key in top_performers:
         new_population[key] = population[key]
-    if(len(population)!=config.training_population):
-        raise Exception("In crossover_population_2 population size is different from training crossover_population")
+    if(len(new_population)+1==config.training_population):
+        new_population.pop(current_population-1)
+        current_population-=1
+    if(len(new_population)!=config.training_population):
+        raise Exception("In crossover_population_3 population size is different from training crossover_population")
     return new_population, current_population
 
 

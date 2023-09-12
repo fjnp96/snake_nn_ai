@@ -45,19 +45,25 @@ class Network:
             layer.bias += mutate_matrix(np.shape(layer.bias),prob)
 
     def random_crossover(self,parent2,child_id=None):
-        child = Network(child_id)
+        child1 = Network(child_id)
+        child2 = Network(child_id+1)
         for (layer1,layer2) in zip(self.layers, parent2.layers):
             if(not isinstance(layer1,FCLayer)):
-                child.add(ActivationLayer(layer1.activation))
+                child1.add(ActivationLayer(layer1.activation))
+                child2.add(ActivationLayer(layer1.activation))
                 continue
             shape = np.shape(layer1.weights)
-            child_layer=FCLayer(shape[0],shape[1])
+            child_layer1=FCLayer(shape[0],shape[1])
+            child_layer2=FCLayer(shape[0],shape[1])
             crossover_bool_matrix = np.random.choice(a=[True, False], size=shape, p=[0.5, 0.5])
-            child_layer.weights = np.where(crossover_bool_matrix,layer1.weights,layer2.weights)
+            child_layer1.weights = np.where(crossover_bool_matrix,layer1.weights,layer2.weights)
+            child_layer2.weights = np.where(crossover_bool_matrix,layer2.weights,layer1.weights)
             crossover_bool_matrix = np.random.choice(a=[True, False], size=np.shape(layer1.bias), p=[0.5, 0.5])
-            child_layer.bias = np.where(crossover_bool_matrix,layer1.bias,layer2.bias)
-            child.add(child_layer)
-        return child
+            child_layer1.bias = np.where(crossover_bool_matrix,layer1.bias,layer2.bias)
+            child_layer2.bias = np.where(crossover_bool_matrix,layer2.bias,layer1.bias)
+            child1.add(child_layer1)
+            child2.add(child_layer2)
+        return child1 , child2
 
     def compare_nn(self,nn):
         for (layer1,layer2) in zip(self.layers, nn.layers):
