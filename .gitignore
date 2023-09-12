@@ -12,7 +12,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-/snake/results/*
+./snake/results/*
 eggs/
 .eggs/
 lib/
