@@ -3,6 +3,7 @@ import config
 import io
 import time
 import keyboard
+import copy
 from concurrent.futures import ProcessPoolExecutor
 from game import Game
 from neural_network import *
@@ -21,9 +22,9 @@ def main(menu):
     train_cycle()
 #@profile
 def train_cycle():
-    layers_list = [[16],[16,16],[16,32,16],[25],[25,25],[25,50,25],[25,50,100,50,25]]
+    layers_list = [[18,10],[20,12],[25,15]]
     for layers in layers_list:
-        for act_fun in config.activation_functions:
+        for act_fun in ["relu"]:
             initial_population = generate_population(0,config.training_population,act_fun,layers)
             train(initial_population,config.genetic_type,act_fun,layers)
 
@@ -31,7 +32,7 @@ def train(initial_population,genetic_type,activation_function,hidden_layers):
     start = time.time()
     #number of id's in population
     current_population=config.training_population
-    population = initial_population.copy()
+    population = copy.deepcopy(initial_population)
     #print("CONFIGGENETICTYPE: ",config.genetic_type)
     #print("Config activation function: ",config.activation_function)
     running = True
@@ -41,10 +42,13 @@ def train(initial_population,genetic_type,activation_function,hidden_layers):
     #Mean of the top performers over the genarations
     top_performers_mean = []
     while(running):
-        current_population = genetic_algorithm(genetic_type,population,top_performers_mean,current_population, generation, hidden_layers)
+        population, current_population = genetic_algorithm(genetic_type,population,top_performers_mean,current_population, generation, hidden_layers)
         generation+=1
         #Stop cycle
         if(keyboard.is_pressed("space") or generation>500):
+            break
+        if(keyboard.is_pressed("q")):
+            quit()
             break
     end = time.time()
     print("Took ",end-start, " Seconds to run")
@@ -77,8 +81,22 @@ def genetic_algorithm(genetic_type,population,top_performers_mean,current_popula
         print_top_scores(pop_score,top_performers,generation)
         current_population = crossover_population2(population,sorted_score,top_performers,current_population)
         mutate_population(population)
+    if(genetic_type==2):
+        #Play population and get Scores
+        pop_score = play_population(population)
+        #SOrt the Scores
+        sorted_score = get_sorted(pop_score)
+        N = int(len(pop_score)*config.percentage_to_reproduce)
+        top_performers = sorted_score[:N]
 
-    return current_population
+        calculate_top_mean(top_performers_mean,pop_score,top_performers)
+        print_top_scores(pop_score,top_performers,generation)
+
+        worst_performers = sorted_score[N:len(pop_score)]
+        old_population = copy.deepcopy(population)
+        population , current_population = crossover_population3(population,top_performers,worst_performers,current_population)
+        #mutate_population(population)
+    return population, current_population
 
 
 def generate_population(start,end,activation_function, hidden_layers):
@@ -94,7 +112,7 @@ def generate_population(start,end,activation_function, hidden_layers):
             nn.add(ActivationLayer(get_activation_function(activation_function)))
         #add Output Layer
         nn.add(FCLayer(layers[len(layers)-1],3))
-        nn.add(ActivationLayer(equal_activation_function))
+        nn.add(ActivationLayer(sig))
         population[nn.id]=nn
     return population
 
@@ -105,7 +123,7 @@ def play_population(population, display=False):
     #Multiprocessing
     # start the process pool
     start1 = time.time()
-    with ProcessPoolExecutor(6) as executor:
+    with ProcessPoolExecutor(8) as executor:
         # submit all tasks
         for score in executor.map(play_nn, population.values(), repeat(display)):
             pop_score[score[0]] = score[1]
@@ -163,6 +181,25 @@ def crossover_population2(population,sorted_score,top_performers,current_populat
         raise Exception("In crossover_population_2 population size is different from training crossover_population")
     return current_population
 
+def crossover_population3(population,top_performers,worst_performers,current_population):
+    new_population = {}
+    for i in worst_performers:
+        parent1 = random.choice(top_performers)
+        parent2 = random.choice(top_performers)
+        while(parent1 == parent2):
+            parent2 = random.choice(top_performers)
+        if(current_population in population.keys()):
+            raise Exception("Error adding new child because key/id already in population")
+        new_population[current_population] = population[parent1].random_crossover(population[parent2],current_population)
+        current_population=current_population+1
+    mutate_population(new_population)
+    for key in top_performers:
+        new_population[key] = population[key]
+    if(len(population)!=config.training_population):
+        raise Exception("In crossover_population_2 population size is different from training crossover_population")
+    return new_population, current_population
+
+
 def mutate_population(population):
     for nn in population.values():
         nn.mutate()
@@ -182,6 +219,8 @@ def print_top_scores(pop_score, top_performers, generation):
     print("ID: ",top_performers[0])
     print("Food Ate",pop_score[top_performer][0])
     print("Score: ",pop_score[top_performer][1])
+    if(pop_score[top_performer][1]==0):
+        print(pop_score)
 
 def calculate_top_mean(top_performers_mean,pop_score,top_performers):
     scores = []
@@ -193,10 +232,12 @@ def equal(x):
     return x
 
 def get_score(game):
-    hit_itself_score = 0
-    if(game.hit_itself_bool):
-        hit_itself_score = -250
-    return (game.score*1000)+game.steps+hit_itself_score
+    hit_score = 0
+    if(game.hit_bool):
+        hit_score = -250
+    if(not game.turned):
+        return 0
+    return (game.score*5000)+game.score2+hit_score
 
 if __name__ == "__main__":
     main(menu)

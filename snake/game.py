@@ -9,6 +9,7 @@ from menu_button import MenuButton
 from game_object import GameObject
 from config import fps
 from config import max_steps
+from config import max_steps_reset_score
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
@@ -58,11 +59,10 @@ class Game:
         # Game loop
         while self.running:
             #Checks for max steps
-            if(self.steps == (max_steps*(self.score+1))):
-                if(not self.turned):
-                    self.score = 0
-                    self.steps = 0
+            if(self.steps == max_steps):
                 self.running = False
+                if(max_steps_reset_score):
+                    self.score=0
                 break
             self.move_nn_snake(nn.predict(self.get_game_state()))
             if(keyboard.is_pressed("space")):
@@ -91,7 +91,16 @@ class Game:
         elif((move == 0 and direction=="north") or (move==2 and direction=="south")):
             self.snake.direction = "west"
         if(move!=1):
-            self.turned==True
+            self.turned=True
+        if(self.prev_direction==self.snake.direction):
+            self.count_same_direction +=1
+        else:
+            self.count_same_direction=0
+        if(self.count_same_direction>8 and move!=0):
+            self.score2 -=1
+        else:
+            self.score2+=2
+        self.prev_direction=self.snake.direction
         #increment the steps taken
         self.steps = self.steps + 1
 
@@ -99,7 +108,7 @@ class Game:
         ate_food = self.ate_food()
         if(ate_food):
             #print("Ate food ->", str(self.food.x) + ":" + str(self.food.y))
-            self.score = self.score + self.points
+            self.score += 1
             self.generate_food()
             self.steps = 0
         if(not(self.game_over)):
@@ -117,7 +126,10 @@ class Game:
 
     #returns true if it hit a wall or itself
     def lose(self):
-        return self.hit_wall() or self.hit_itself()
+        x = self.hit_wall() or self.hit_itself()
+        if(x):
+            self.hit_bool = True
+        return x
     #sets a new method to call when the game is lost
     def set_on_lose_function(self, on_lose_function):
         self.on_lose_function = on_lose_function
@@ -134,7 +146,6 @@ class Game:
         head = self.snake.body[0]
         for i in range(1,len(self.snake.body)):
             if(self.snake.body[i].x == head.x and self.snake.body[i].y == head.y):
-                self.hit_itself_bool = True
                 return True
         return False
 
@@ -182,7 +193,10 @@ class Game:
     def setup_nn_game(self):
         self.steps = 0
         self.turned=False
-        self.hit_itself_bool = False
+        self.hit_bool = False
+        self.prev_direction = self.snake.direction
+        self.count_same_direction = 0
+        self.score2 = 0
 
     def draw_body(self):
         for body in self.snake.body:
@@ -265,7 +279,7 @@ def get_direction(direction):
 # this function will return the 8 values for the food since only one can have a value
 def get_food_distance(food, head):
     #[N,NE,E,SE,S,SW,W,NW]
-    food_distance=[-1]*8
+    food_distance=[10000]*8
     #x axis
     if(solve(head,0,head[0],(food[1],food[0]))):
         d = math.dist(head,food)
@@ -308,7 +322,7 @@ def get_food_distance(food, head):
 def get_distance_to_walls(head,width,height):
     #[N,NE,E,SE,S,SW,W,NW]
     # Initialize wall distances
-    wall_distances = [-1] * 8
+    wall_distances = [10000] * 8
     # Calculate the distance to the N wall
     wall_distances[0] = head[1]
      # Calculate the distance to the E wall
@@ -351,7 +365,7 @@ def get_distance_to_itself(head,body):
     body.reverse()
     for i in body:
         #[N,NE,E,SE,S,SW,W,NW]
-        distance=[-1]*8
+        distance=[10000]*8
         #x axis
         if(solve(head,0,head[0],(i[1],i[0]))):
             d = math.dist(head,i)

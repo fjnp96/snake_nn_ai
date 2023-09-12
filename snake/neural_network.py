@@ -1,7 +1,9 @@
 import numpy as np
 import random
 import config
-
+import warnings
+# suppress warnings
+warnings.filterwarnings('ignore')
 class Network:
     def __init__(self,nn_id=None):
         self.id = nn_id
@@ -57,6 +59,19 @@ class Network:
             child.add(child_layer)
         return child
 
+    def compare_nn(self,nn):
+        for (layer1,layer2) in zip(self.layers, nn.layers):
+            if(not isinstance(layer1,FCLayer)):
+                continue
+            if((not (layer1.weights==layer2.weights).all()) or (not (layer1.bias==layer2.bias).all())):
+                print("layer1 weights:",layer1.weights)
+                print("layer2 weights:",layer2.weights)
+                print("layer1 bias:",layer1.bias)
+                print("layer1 bias:",layer2.bias)
+                raise Exception("NN id:",self.id," is not equal to NN id:",nn.id)
+                return False
+
+
 
 
 
@@ -107,6 +122,9 @@ def tanh(x):
 
 def relu(x):
     return np.maximum(0,x)
+
+def sig(x):
+    return 1/(1 + np.exp(-x))
 
 def get_activation_function(name):
     if(name =="tanh"):
