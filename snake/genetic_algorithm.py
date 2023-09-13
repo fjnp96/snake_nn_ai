@@ -42,10 +42,10 @@ class GeneticAlgorithm:
                 break
         end = time.time()
         print("Took ",end-start, " Seconds to run")
-        print("top_performers_mean",top_performers_mean)
+        print("top_performers_mean",self.top_performers_mean)
         print("Plotting")
-        trace = go.Scatter(x=[i for i in range(1,generation+1,1)],y=top_performers_mean)
-        offline.plot([trace], filename = "results/results"+str(genetic_type)+"-"+activation_function+str(hidden_layers)+".html")
+        trace = go.Scatter(x=[i for i in range(1,generation+1,1)],y=self.top_performers_mean)
+        offline.plot([trace], filename = "results/results"+str(self.genetic_type.__name__)+"-"+self.activation_function+str(self.hidden_layers)+".html")
 
 
     def genetic_algorithm1(self,generation):
@@ -94,8 +94,8 @@ class GeneticAlgorithm:
             parent1 = self.population[top_performers[i]]
             parent2 = self.population[top_performers[i+1]]
             child1, child2 = parent1.random_crossover(parent2,self.current_population)
-            new_population[current_population] = child1
-            new_population[current_population+1] = child2
+            new_population[self.current_population] = child1
+            new_population[self.current_population+1] = child2
             self.current_population+=2
             N+=2
         mutate_population(new_population)
@@ -103,9 +103,9 @@ class GeneticAlgorithm:
         worst_performers = sorted_score[-N:]
         for worst_performer in worst_performers:
             self.population.pop(worst_performer)
-        if(len(self.population)!=training_population):
-            raise Exception("In genetic type 1 population size is different from training crossover_population")
         self.population.update(new_population)
+        if(len(self.population)!=training_population):
+            raise Exception("In genetic type 1 population size is different from training crossover_population, population_size",len(self.population))
 
     def genetic_algorithm3(self,generation):
         pop_score = self.play_population()
@@ -159,8 +159,6 @@ class GeneticAlgorithm:
     def fill_population(self):
         start = self.current_population
         end = self.current_population + training_population - len(self.population)
-        print("start:",start)
-        print("end:",end)
         self.current_population = end
         self.population.update(generate_population(start,end,self.activation_function,self.hidden_layers))
         if(len(self.population)!=training_population):
@@ -195,6 +193,11 @@ def fitness(game):
     if(not game.turned):
         return 0
     return (game.score*5000)+game.score2+hit_score
+
+def fitness1(game):
+    steps =game.total_steps
+    score = game.score
+    return steps + (pow(2,steps)+(pow(score,2.1)*500)) - (pow(score,1.2)*pow((0.25*steps),1.3))
 
 def get_sorted(pop_score):
     return [item[0] for item in sorted(pop_score.items(),key = lambda i: i[1][1],reverse = True)]

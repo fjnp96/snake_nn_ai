@@ -30,8 +30,9 @@ def train_cycle():
     layers_list = [[18,10],[20,12],[25,15]]
     for layers in layers_list:
         for act_fun in ["relu"]:
-            alg = GeneticAlgorithm(0,act_fun,layers)
-            alg.train(5)
+            alg = GeneticAlgorithm(2,act_fun,layers)
+            alg.train(500)
+            #YOU ARE TESTING THE GENETIC TYPES AFTER THE REFACTOR, MISSING: 1 and 2
             #train(initial_population,config.genetic_type,act_fun,layers)
 
 

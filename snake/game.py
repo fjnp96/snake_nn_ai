@@ -103,6 +103,7 @@ class Game:
         self.prev_direction=self.snake.direction
         #increment the steps taken
         self.steps = self.steps + 1
+        self.total_steps+=1
 
     def game_cycle(self):
         ate_food = self.ate_food()
@@ -183,6 +184,7 @@ class Game:
             #Screen to display the Score
             self.score_screen = pygame.Surface((self.score_margin*4,self.score_margin))
     def setup_nn_game(self):
+        self.total_steps = 0
         self.steps = 0
         self.turned=False
         self.hit_bool = False
