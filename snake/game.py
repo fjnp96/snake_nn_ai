@@ -107,7 +107,6 @@ class Game:
     def game_cycle(self):
         ate_food = self.ate_food()
         if(ate_food):
-            #print("Ate food ->", str(self.food.x) + ":" + str(self.food.y))
             self.score += 1
             self.generate_food()
             self.steps = 0
@@ -116,13 +115,6 @@ class Game:
         if(self.lose()):
             self.game_over = True
             self.running = False
-        """
-        print("[N,NE,E,SE,S,SW,W,NW]")
-        print("Distance to food: " ,debug[:8])
-        print("Distance to Wall: ", debug[8:16])
-        print("Distance to itself: ", debug[16:24])
-        print("Direction: ", debug[24])
-        """
 
     #returns true if it hit a wall or itself
     def lose(self):

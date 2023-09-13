@@ -3,12 +3,15 @@
 #0 -> New population = Top performers + childs + New Random NN's
 #1 -> New population = Top performers + childs - N Worst Performers: Where N = number of childs
 #2 -> New population = Top performers + mutated(childs): Where N childs = Total population - Top performers. Picks random parents to mutate
-genetic_type=2
+genetic_type=0
 training_population = 500
 #percentage of the population that reproduces
-percentage_to_reproduce = 0.1
-if(training_population*percentage_to_reproduce%2!=0 and training_population*percentage_to_reproduce>=2):
-    raise Exception("training_population multipled by the percentage_to_reproduce must be an even number")
+percentage_to_crossover = 0.1
+if(training_population*percentage_to_crossover%2!=0 and training_population*percentage_to_crossover>=2):
+    raise Exception("training_population multipled by the percentage_to_crossover must be an even number")
+#For Genetic type 1 the percentage to crossover must be less than 50% otherwise it will create more that half of the population
+if(genetic_type==1 and percentage_to_crossover>0.5):
+    raise Exception("genetic_type 1 percentage_to_crossovermust be less or equal to 50%/0.5")
 skip_menu = True
 min_mutation=-0.1 #beetween -0.5 and 0.5
 max_mutation=0.1
@@ -27,3 +30,6 @@ max_steps_reset_score=True
 
 #Activation function
 activation_functions = ["tanh", "relu"]
+
+#Multiprocessing
+nr_processes = 8
