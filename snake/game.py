@@ -14,7 +14,7 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 font = pygame.font.SysFont('Arial',40)
-
+inf = 999999999
 class Game:
     score = 0
     fpsClock = pygame.time.Clock()
@@ -53,7 +53,7 @@ class Game:
             self.game_cycle()
 
     #Cycle for NN to Play
-    def play_nn(self, nn):
+    def play_nn(self, nn, generation=1):
         self.setup_game()
         self.setup_nn_game()
         # Game loop
@@ -76,6 +76,11 @@ class Game:
 
     #Move NN snake based on the prediction list
     def move_nn_snake(self,predictions):
+        # Before move, store old distance
+        head = (self.snake.body[0].x, self.snake.body[0].y)
+        food = (self.food.x, self.food.y)
+        old_distance = math.dist(head, food)
+
         move = np.argmax(predictions)
         #move can be either 0,1 or 2
         #0 -> rotate counter_clockwise
@@ -96,14 +101,24 @@ class Game:
             self.count_same_direction +=1
         else:
             self.count_same_direction=0
-        if(self.count_same_direction>8 and move!=0):
-            self.score2 -=1
+        if(self.count_same_direction>8 and move==1):
+            self.score2 -=5
         else:
-            self.score2+=2
+            self.score2+=1
         self.prev_direction=self.snake.direction
         #increment the steps taken
         self.steps = self.steps + 1
         self.total_steps+=1
+
+        # After move, check new distance
+        head_new = (self.snake.body[0].x, self.snake.body[0].y)
+        new_distance = math.dist(head_new, food)
+
+        # Reward if moved closer
+        if new_distance < old_distance:
+            self.score2 += 5  # moving toward food
+        elif new_distance > old_distance:
+            self.score2 -= 5  # moving away from food
 
     def game_cycle(self):
         ate_food = self.ate_food()
@@ -238,30 +253,55 @@ class Game:
                 print("west")
 
     #Returns a list which will be the Input for the NN
-    #This list will have 25 elements, which represent the 8 direction the snake looks and distance to food, itself, and the wall
-    #plus the direction it is facing
+    #This list will have 28 elements: 8 food rays, 8 wall rays, 8 self rays, 4 direction one-hot
     def get_game_state(self):
         game_state = []
-        #MAGIC NUMBER TO BE CHANGED
-        #It represents the squares width and height
-        magic = 20
-        #food
-        food = (self.food.x/magic,self.food.y/magic)
-        #Snake head
-        head = (self.snake.body[0].x/magic,self.snake.body[0].y/magic)
+        # Use actual cell size (object_size) so grid units stay consistent
+        cell = self.object_size
+
+        # food and head in grid coordinates (cells)
+        food = (self.food.x / cell, self.food.y / cell)
+        head = (self.snake.body[0].x / cell, self.snake.body[0].y / cell)
 
         body = []
-        for i in range(1,len(self.snake.body)):
-            body.append((self.snake.body[i].x/magic,self.snake.body[i].y/magic))
+        for i in range(1, len(self.snake.body)):
+            body.append((self.snake.body[i].x / cell, self.snake.body[i].y / cell))
 
+        # raw distances returned by helpers (in cells). Some values may be very large (inf sentinel).
+        food_dist = get_food_distance(food, head)
+        wall_dist = get_distance_to_walls(head, self.game_width / cell, self.game_height / cell)
+        self_dist = get_distance_to_itself(head, body)
 
-        #distance to the food
-        game_state.extend(get_food_distance(food,head))
-        #distance to walls
-        game_state.extend(get_distance_to_walls(head,self.game_width/magic,self.game_height/magic))
-        #distance to itself
-        game_state.extend(get_distance_to_itself(head,body))
-        game_state.append(get_direction(self.snake.direction))
+        # normalize distances to [0,1] where 1 = very close, 0 = far / not present
+        cols = int(self.game_width / cell)
+        rows = int(self.game_height / cell)
+        max_dist = math.hypot(cols, rows)
+
+        def _normalize_list(lst):
+            out = []
+            for d in lst:
+                try:
+                    # treat very large distances as "not present"
+                    if d is None or d > max_dist:
+                        out.append(0.0)
+                    else:
+                        v = 1.0 - (d / max_dist)
+                        out.append(max(0.0, v))
+                except Exception:
+                    out.append(0.0)
+            return out
+
+        game_state.extend(_normalize_list(food_dist))
+        game_state.extend(_normalize_list(wall_dist))
+        game_state.extend(_normalize_list(self_dist))
+
+        # direction as one-hot (north, east, south, west)
+        dir_idx = get_direction(self.snake.direction)
+        dir_one_hot = [0, 0, 0, 0]
+        if 0 <= dir_idx < 4:
+            dir_one_hot[dir_idx] = 1
+        game_state.extend(dir_one_hot)
+
         return game_state
 
 
@@ -273,7 +313,7 @@ def get_direction(direction):
 # this function will return the 8 values for the food since only one can have a value
 def get_food_distance(food, head):
     #[N,NE,E,SE,S,SW,W,NW]
-    food_distance=[10000]*8
+    food_distance=[inf]*8
     #x axis
     if(solve(head,0,head[0],(food[1],food[0]))):
         d = math.dist(head,food)
@@ -313,10 +353,35 @@ def get_food_distance(food, head):
             food_distance[1] = d
     return food_distance
 
+def get_distance_to_walls(head, width, height):
+    # Initialize wall distances [N, NE, E, SE, S, SW, W, NW]
+    wall_distances = [inf] * 8
+
+    # North
+    wall_distances[0] = head[1]
+    # East
+    wall_distances[2] = width - head[0]
+    # South
+    wall_distances[4] = height - head[1]
+    # West
+    wall_distances[6] = head[0]
+
+    # Calculate diagonal distances
+    # NE
+    wall_distances[1] = min(width - head[0], head[1]) * math.sqrt(2)
+    # SE
+    wall_distances[3] = min(width - head[0], height - head[1]) * math.sqrt(2)
+    # SW
+    wall_distances[5] = min(head[0], height - head[1]) * math.sqrt(2)
+    # NW
+    wall_distances[7] = min(head[0], head[1]) * math.sqrt(2)
+
+    return wall_distances
+"""
 def get_distance_to_walls(head,width,height):
     #[N,NE,E,SE,S,SW,W,NW]
     # Initialize wall distances
-    wall_distances = [10000] * 8
+    wall_distances = [inf] * 8
     # Calculate the distance to the N wall
     wall_distances[0] = head[1]
      # Calculate the distance to the E wall
@@ -353,13 +418,48 @@ def get_distance_to_walls(head,width,height):
         point = get_intersect(directions[i],walls[i])
         wall_distances[(i*2)+1] = math.dist(head,point)
     return wall_distances
+"""
 
+def get_distance_to_itself(head, body):
+    # Initialize distances for [N, NE, E, SE, S, SW, W, NW]
+    distances = [inf] * 8
 
+    # Iterate through each body segment
+    for segment in body:
+        dx = segment[0] - head[0]
+        dy = segment[1] - head[1]
+
+        # Calculate the distance
+        d = math.sqrt(dx**2 + dy**2)
+
+        # Determine direction
+        if dx == 0:  # Same column
+            if dy < 0:  # North
+                distances[0] = min(distances[0], d)
+            elif dy > 0:  # South
+                distances[4] = min(distances[4], d)
+        elif dy == 0:  # Same row
+            if dx > 0:  # East
+                distances[2] = min(distances[2], d)
+            elif dx < 0:  # West
+                distances[6] = min(distances[6], d)
+        elif abs(dx) == abs(dy):  # Diagonal
+            if dx > 0 and dy < 0:  # NE
+                distances[1] = min(distances[1], d)
+            elif dx > 0 and dy > 0:  # SE
+                distances[3] = min(distances[3], d)
+            elif dx < 0 and dy > 0:  # SW
+                distances[5] = min(distances[5], d)
+            elif dx < 0 and dy < 0:  # NW
+                distances[7] = min(distances[7], d)
+
+    return distances
+"""
 def get_distance_to_itself(head,body):
     body.reverse()
     for i in body:
         #[N,NE,E,SE,S,SW,W,NW]
-        distance=[10000]*8
+        distance=[inf]*8
         #x axis
         if(solve(head,0,head[0],(i[1],i[0]))):
             d = math.dist(head,i)
@@ -398,7 +498,7 @@ def get_distance_to_itself(head,body):
             else:
                 distance[1] = d
     return distance
-
+"""
 
 
 

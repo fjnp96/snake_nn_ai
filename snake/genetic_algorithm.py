@@ -1,3 +1,4 @@
+import math
 import time
 import keyboard
 from config import training_population
@@ -30,6 +31,7 @@ class GeneticAlgorithm:
         generation = 1
         #Mean of the top performers over the genarations
         while(running):
+            #Runs the generation and creates the new population based on the genetic type
             self.genetic_type(generation)
             generation+=1
             #Stop cycle
@@ -49,7 +51,7 @@ class GeneticAlgorithm:
 
 
     def genetic_algorithm1(self,generation):
-        pop_score = self.play_population()
+        pop_score = self.play_population(generation)
         sorted_score = get_sorted(pop_score)
 
         N = int(len(pop_score)*percentage_to_crossover)
@@ -57,7 +59,14 @@ class GeneticAlgorithm:
         self.calculate_top_mean(pop_score,top_performers)
         print_top_scores(pop_score,top_performers,generation)
 
+        elite_count = max(1, int(len(pop_score) * 0.05))  # 5% of population
+        elite_ids = sorted_score[:elite_count]
+
         new_population = {}
+
+        # Copy elite directly into new population
+        for elite_id in elite_ids:
+            new_population[elite_id] = self.population[elite_id]
         #Crossover
         for i in range(0,len(top_performers),2):
             parent1 = self.population[top_performers[i]]
@@ -108,7 +117,7 @@ class GeneticAlgorithm:
             raise Exception("In genetic type 1 population size is different from training crossover_population, population_size",len(self.population))
 
     def genetic_algorithm3(self,generation):
-        pop_score = self.play_population()
+        pop_score = self.play_population(generation)
         sorted_score = get_sorted(pop_score)
 
         N = int(len(pop_score)*percentage_to_crossover)
@@ -118,8 +127,14 @@ class GeneticAlgorithm:
         print_top_scores(pop_score,top_performers,generation)
 
         worst_performers = sorted_score[N:len(pop_score)]
+        elite_count = max(1, int(len(pop_score) * 0.05))  # 5% of population
+        elite_ids = sorted_score[:elite_count]
 
         new_population = {}
+
+        # Copy elite directly into new population
+        for elite_id in elite_ids:
+            new_population[elite_id] = self.population[elite_id]
         for _ in range(round(len(worst_performers)/2)):
             parent1 = random.choice(top_performers)
             parent2 = random.choice(top_performers)
@@ -144,7 +159,7 @@ class GeneticAlgorithm:
 
         self.population=new_population
 
-    def play_population(self):
+    def play_population(self,generation=1):
         pop_score = {}
         if(len(self.population)!=training_population):
             raise Exception("Error in population len : ",len(self.population))
@@ -152,7 +167,7 @@ class GeneticAlgorithm:
         # start the process pool
         with ProcessPoolExecutor(config.nr_processes) as executor:
             # submit all tasks
-            for score in executor.map(play_nn, self.population.values(), repeat(self.display)):
+            for score in executor.map(play_nn, self.population.values(), repeat(self.display), repeat(generation)):
                 pop_score[score[0]] = score[1]
         return pop_score
 
@@ -181,10 +196,10 @@ class GeneticAlgorithm:
             case _:
                 raise Exception("No or Wrong Genetic GeneticAlgorithm found, try 0,1 or 2")
 
-def play_nn(nn,display):
+def play_nn(nn,display,generation):
     game = Game(800,600,display)
     game.play_nn(nn)
-    return (nn.id,(game.score,fitness(game)))
+    return (nn.id,(game.score,fitness2(game,generation)))
 
 def fitness(game):
     hit_score = 0
@@ -198,6 +213,35 @@ def fitness1(game):
     steps =game.total_steps
     score = game.score
     return steps + (pow(2,steps)+(pow(score,2.1)*500)) - (pow(score,1.2)*pow((0.25*steps),1.3))
+
+def fitness2(game,generation=1):
+    hit_score = 0
+    if(game.hit_bool):
+        hit_score = -25
+    
+    # Adaptive food multiplier: scale down early, up later
+    # Gen 1-100: ×300, Gen 101-300: ×500, Gen 301+: ×700
+    if generation <= 100:
+        food_mult = 300
+    elif generation <= 300:
+        food_mult = 500
+    else:
+        food_mult = 700
+    
+    food_reward = game.score * food_mult
+    
+    # Add distance-based reward for moving toward food
+    head = (game.snake.body[0].x, game.snake.body[0].y)
+    food = (game.food.x, game.food.y)
+    distance_to_food = math.dist(head, food)
+    
+    # Normalize distance reward (board is ~720x520)
+    max_distance = 900
+    distance_reward = (1 - distance_to_food / max_distance) * 10
+    
+    survival_bonus = game.total_steps * 0.01
+    total = food_reward + game.score2 + distance_reward + survival_bonus + hit_score
+    return round(total,1)
 
 def get_sorted(pop_score):
     return [item[0] for item in sorted(pop_score.items(),key = lambda i: i[1][1],reverse = True)]

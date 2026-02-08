@@ -27,7 +27,7 @@ def main(menu):
 
 #@profile
 def train_cycle():
-    layers_list = [[18,10],[20,12],[25,15]]
+    layers_list = [[32,32],[64,64],[128,128]]
     for layers in layers_list:
         for act_fun in ["relu"]:
             alg = GeneticAlgorithm(2,act_fun,layers)
