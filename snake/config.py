@@ -4,9 +4,9 @@
 #1 -> New population = Top performers + childs - N Worst Performers: Where N = number of childs
 #2 -> New population = Top performers + mutated(childs): Where N childs = Total population - Top performers. Picks random parents to mutate
 genetic_type=0
-training_population = 500
+training_population = 1000
 #percentage of the population that reproduces
-percentage_to_crossover = 0.04
+percentage_to_crossover = 0.10
 if(training_population*percentage_to_crossover%2!=0 and training_population*percentage_to_crossover>=2):
     raise Exception("training_population multipled by the percentage_to_crossover must be an even number")
 #For Genetic type 1 the percentage to crossover must be less than 50% otherwise it will create more that half of the population
@@ -17,14 +17,14 @@ min_mutation=-0.2 #beetween -0.5 and 0.5
 max_mutation=0.2
 #set random_mutation to True to mutate to a random number and ignore the two above values
 random_mutation=False
-default_mutation_rate=0.05
+default_mutation_rate=0.1
 #Number of inputs for the NN
-nn_nb_inputs=25
+nn_nb_inputs=28
 #Number of neurons in each hidden layers
-nn_nb_hidden_layers = [16]
+nn_nb_hidden_layers = [64,32]
 fps = 10
 
-max_steps = 100
+max_steps = 500
 #Reset score when max_steps
 max_steps_reset_score=False
 
@@ -32,4 +32,4 @@ max_steps_reset_score=False
 activation_functions = ["tanh", "relu"]
 
 #Multiprocessing
-nr_processes = 8
+nr_processes = 16
